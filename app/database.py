@@ -12,7 +12,8 @@ import os
 
 
 DB_PATH = os.environ.get("DB_PATH", "/data/shm.db")
-DATABASE_URL = f"sqlite:///{DB_PATH}"
+DATABASE_URL = os.environ["DATABASE_URL"]
+
 
 engine = create_engine(
     DATABASE_URL,

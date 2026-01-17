@@ -69,7 +69,6 @@ def upsert_report(db: Session, event_id: str, rtype: str, link: str):
         .filter_by(event_id=event_id, type=rtype)
         .first()
     )
-
     if not r:
         r = models.Report(
             event_id=event_id,

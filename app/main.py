@@ -10,6 +10,8 @@ from fastapi import HTTPException
 from fastapi import HTTPException
 from dateutil.parser import isoparse
 from fastapi import Header
+from fastapi import Request
+from .security import verify_api_key
 
 models.Base.metadata.create_all(bind=engine)
 
@@ -49,22 +51,21 @@ def infer_status(lam: float) -> str:
     return "CRITICO"
 
 
-@app.post("/ingest/alert", dependencies=[Depends(verify_api_key)])
-def ingest_alert(data: schemas.AlertIn, db: Session = Depends(get_db)):
+@app.post("/ingest/alert")
+def ingest_alert(
+    data: schemas.AlertIn,
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    verify_api_key(request)
 
     if not data.event_time:
-        raise HTTPException(
-            status_code=400,
-            detail="event_time is required"
-        )
+        raise HTTPException(status_code=400, detail="event_time is required")
 
     try:
         event_time = isoparse(data.event_time)
     except Exception:
-        raise HTTPException(
-            status_code=400,
-            detail="Invalid event_time format"
-        )
+        raise HTTPException(status_code=400, detail="Invalid event_time format")
 
     status = data.status or infer_status(data.lambda_max)
 
@@ -87,23 +88,27 @@ def ingest_alert(data: schemas.AlertIn, db: Session = Depends(get_db)):
     return {"ok": True}
 
 
-
-@app.post("/ingest/report_links", dependencies=[Depends(verify_api_key)])
+@app.post("/ingest/report_links")
 def ingest_report_links(
     payload: schemas.ReportLinksIn,
+    request: Request,
     db: Session = Depends(get_db)
 ):
+    verify_api_key(request)
+
     try:
-        event = crud.get_event(db, payload.building_id, payload.event_id)
+        event = crud.get_event(db, payload.event_id)
 
         if not event:
-            event = crud.create_placeholder_event(
+            crud.upsert_event(
                 db,
                 building_id=payload.building_id,
-                event_id=payload.event_id
+                event_id=payload.event_id,
+                status="SIN_DATOS",
+                lambda_max=None,
+                event_time=datetime.utcnow()
             )
 
-        # SOLO links, nunca estado
         if payload.reports.alerta:
             crud.upsert_report(
                 db,

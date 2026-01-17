@@ -108,15 +108,23 @@ def ingest_report_links(
     print("PAYLOAD:", payload)
 
     try:
+        # 1️⃣ Asegurar edificio (OBLIGATORIO por FK)
+        crud.upsert_building(
+            db,
+            building_id=payload.building_id,
+            status="SIN_DATOS",
+            lambda_max=None
+        )
+
+        # 2️⃣ Buscar evento
         event = crud.get_event(
             db,
             payload.building_id,
             payload.event_id
         )
-        print("EVENT FOUND:", event)
 
+        # 3️⃣ Crear placeholder si no existe
         if not event:
-            print("CREATING PLACEHOLDER EVENT")
             event = crud.create_placeholder_event(
                 db,
                 payload.building_id,

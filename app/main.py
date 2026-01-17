@@ -87,14 +87,14 @@ def ingest_alert(
         lambda_max=data.lambda_max
     )
 
-    crud.upsert_event(
-        db,
-        building_id=data.building_id,
-        event_id=data.event_id,
-        status=status,
-        lambda_max=data.lambda_max,
-        event_time=event_time
-    )
+    crud.upsert_alert(
+    db,
+    building_id=data.building_id,
+    event_id=data.event_id,
+    lambda_max=data.lambda_max,
+    status=status,
+    event_time=event_time
+)
 
     return {"ok": True}
 
@@ -162,7 +162,8 @@ def get_building(building_id: str, db: Session = Depends(get_db)):
     return b
 
 
-@app.get("/events/{event_id}", response_model=schemas.EventOut)
+@app.get("/buildings/{building_id}/events/{event_id}")
+
 def get_event(event_id: str, db: Session = Depends(get_db)):
     ev = (
         db.query(models.Event)

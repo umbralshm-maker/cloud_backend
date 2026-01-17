@@ -62,6 +62,77 @@ def upsert_report(
 
     db.commit()
 
+def upsert_event(
+    db: Session,
+    building_id: str,
+    event_id: str,
+    status: str,
+    lambda_max,
+    event_time
+):
+    ev = (
+        db.query(models.Event)
+        .filter_by(building_id=building_id, event_id=event_id)
+        .first()
+    )
+
+    if ev:
+        ev.status = status
+        ev.lambda_max = lambda_max
+        ev.event_time = event_time
+    else:
+        ev = models.Event(
+            building_id=building_id,
+            event_id=event_id,
+            status=status,
+            lambda_max=lambda_max,
+            event_time=event_time
+        )
+        db.add(ev)
+
+    db.commit()
+    return ev
+
+def upsert_alert(
+    db: Session,
+    building_id: str,
+    event_id: str,
+    lambda_max,
+    status: str,
+    event_time
+):
+    # 1. building
+    upsert_building(
+        db,
+        building_id=building_id,
+        status=status,
+        lambda_max=lambda_max
+    )
+
+    # 2. event
+    ev = (
+        db.query(models.Event)
+        .filter_by(building_id=building_id, event_id=event_id)
+        .first()
+    )
+
+    if ev:
+        ev.status = status
+        ev.lambda_max = lambda_max
+        ev.event_time = event_time
+    else:
+        ev = models.Event(
+            building_id=building_id,
+            event_id=event_id,
+            status=status,
+            lambda_max=lambda_max,
+            event_time=event_time
+        )
+        db.add(ev)
+
+    db.commit()
+    return ev
+
 
 def get_all_buildings(db: Session):
     return db.query(models.Building).all()

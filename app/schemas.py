@@ -18,12 +18,20 @@ class AlertIn(BaseModel):
     event_time: Optional[str] = None
 
 
+class ReportLink(BaseModel):
+    share_link: str
+
+
+class ReportLinks(BaseModel):
+    alerta: Optional[ReportLink] = None
+    evento: Optional[ReportLink] = None
+    mensual: Optional[ReportLink] = None
+
+
 class ReportLinksIn(BaseModel):
     building_id: str
     event_id: str
-    reports: Dict[str, Dict[str, str]]
-
-
+    reports: ReportLinks
 
 class BuildingOut(BaseModel):
     building_id: str

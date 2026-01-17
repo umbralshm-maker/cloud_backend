@@ -138,6 +138,7 @@ def ingest_report_links(
         if payload.reports.alerta:
             crud.upsert_report(
                 db,
+                building_id=payload.building_id,
                 event_id=payload.event_id,
                 rtype="alerta",
                 link=payload.reports.alerta.share_link
@@ -146,6 +147,7 @@ def ingest_report_links(
         if payload.reports.evento:
             crud.upsert_report(
                 db,
+                building_id=payload.building_id,
                 event_id=payload.event_id,
                 rtype="evento",
                 link=payload.reports.evento.share_link
@@ -154,6 +156,7 @@ def ingest_report_links(
         if payload.reports.mensual:
             crud.upsert_report(
                 db,
+                building_id=payload.building_id,
                 event_id=payload.event_id,
                 rtype="mensual",
                 link=payload.reports.mensual.share_link

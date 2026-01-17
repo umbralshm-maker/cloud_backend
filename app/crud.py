@@ -18,33 +18,33 @@ def upsert_building(db: Session, building_id: str, status: str, lambda_max):
     db.commit()
 
 
-def upsert_event(
+def upsert_report(
     db: Session,
     building_id: str,
     event_id: str,
-    status: str,
-    lambda_max,
-    event_time
+    rtype: str,
+    link: str
 ):
-    ev = (
-        db.query(models.Event)
-        .filter_by(event_id=event_id, building_id=building_id)
+    r = (
+        db.query(models.Report)
+        .filter_by(
+            building_id=building_id,
+            event_id=event_id,
+            type=rtype
+        )
         .first()
     )
 
-    if ev:
-        ev.status = status
-        ev.lambda_max = lambda_max
-        ev.event_time = event_time
-    else:
-        ev = models.Event(
+    if not r:
+        r = models.Report(
             building_id=building_id,
             event_id=event_id,
-            status=status,
-            lambda_max=lambda_max,
-            event_time=event_time
+            type=rtype,
+            share_link=link
         )
-        db.add(ev)
+        db.add(r)
+    else:
+        r.share_link = link
 
     db.commit()
 
@@ -102,9 +102,16 @@ def get_event(db: Session, building_id: str, event_id: str):
     )
 
 
-def get_reports_for_event(db: Session, event_id: str):
+def get_reports_for_event(
+    db: Session,
+    building_id: str,
+    event_id: str
+):
     return (
         db.query(models.Report)
-        .filter_by(event_id=event_id)
+        .filter_by(
+            building_id=building_id,
+            event_id=event_id
+        )
         .all()
     )

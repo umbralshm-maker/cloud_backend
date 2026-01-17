@@ -15,9 +15,10 @@ class Building(Base):
     __tablename__ = "buildings"
 
     id = Column(Integer, primary_key=True)
+    building_id = Column(String, unique=True, index=True, nullable=False)
 
-    last_status = Column(String, nullable=True)
-    last_lambda = Column(Float, nullable=True)
+    last_status = Column(String)
+    last_lambda = Column(Float)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
 
@@ -26,26 +27,30 @@ class Event(Base):
 
     id = Column(Integer, primary_key=True)
     event_id = Column(String, nullable=False)
-    building_id = Column(
-        String,
-        ForeignKey("buildings.building_id"),
-        nullable=False
-    )
+    building_id = Column(String, ForeignKey("buildings.building_id"), nullable=False)
 
     status = Column(String, nullable=False)
-    lambda_max = Column(Float, nullable=True)
-    event_time = Column(DateTime(timezone=True), nullable=True)
+    lambda_max = Column(Float)
+    event_time = Column(DateTime(timezone=True))
 
-    created_at = Column(
-        DateTime(timezone=True),
-        server_default=func.now()
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    __table_args__ = (
+        UniqueConstraint("event_id", "building_id", name="uq_event_building"),
     )
 
 class Report(Base):
     __tablename__ = "reports"
 
     id = Column(Integer, primary_key=True)
+    building_id = Column(String, nullable=False, index=True)
     event_id = Column(String, nullable=False, index=True)
     type = Column(String, nullable=False)
     share_link = Column(String, nullable=False)
 
+    __table_args__ = (
+        UniqueConstraint(
+            "building_id", "event_id", "type",
+            name="uq_report_event_type"
+        ),
+    )

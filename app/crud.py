@@ -57,7 +57,13 @@ def upsert_event(
     db.commit()
 
 
-def upsert_report(db: Session, building_id: str, event_id: str, rtype: str, link: str):
+def upsert_report(
+    db: Session,
+    building_id: str,
+    event_id: str,
+    rtype: str,
+    link: str
+):
     r = (
         db.query(models.Report)
         .filter_by(
@@ -67,6 +73,19 @@ def upsert_report(db: Session, building_id: str, event_id: str, rtype: str, link
         )
         .first()
     )
+
+    if not r:
+        r = models.Report(
+            building_id=building_id,
+            event_id=event_id,
+            type=rtype,
+            share_link=link
+        )
+        db.add(r)
+    else:
+        r.share_link = link
+
+    db.commit()
 
 def get_all_buildings(db: Session):
     return db.query(models.Building).all()

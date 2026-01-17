@@ -45,10 +45,14 @@ class Report(Base):
     __tablename__ = "reports"
 
     id = Column(Integer, primary_key=True)
-    event_id = Column(String, index=True, nullable=False)
-
-    type = Column(String, nullable=False)  # alerta | evento | mensual
+    building_id = Column(String, nullable=False, index=True)
+    event_id = Column(String, nullable=False, index=True)
+    type = Column(String, nullable=False)
     share_link = Column(String, nullable=False)
 
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
-
+    __table_args__ = (
+        UniqueConstraint(
+            "building_id", "event_id", "type",
+            name="uq_report_per_event_type"
+        ),
+    )

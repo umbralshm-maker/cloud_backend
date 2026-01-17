@@ -108,53 +108,56 @@ def ingest_alert(
     return {"ok": True}
 
 
-@app.post("/ingest/report_links", dependencies=[Depends(verify_api_key)])
+@app.post("/ingest/report_links")
 def ingest_report_links(
     payload: schemas.ReportLinksIn,
     db: Session = Depends(get_db),
+    _: None = Depends(verify_api_key)
 ):
     try:
-        event = crud.get_event(db, payload.event_id)
+        event = crud.get_event(
+            db,
+            payload.building_id,
+            payload.event_id
+        )
 
-        # Si el evento no existe aún, se crea placeholder
         if not event:
-            crud.upsert_event(
+            event = crud.create_placeholder_event(
                 db,
-                building_id=payload.building_id,
-                event_id=payload.event_id,
-                status="SIN_DATOS",
-                lambda_max=None,
-                event_time=datetime.utcnow()
+                payload.building_id,
+                payload.event_id
             )
 
         if payload.reports.alerta:
             crud.upsert_report(
                 db,
-                event_id=payload.event_id,
-                rtype="alerta",
-                link=payload.reports.alerta.share_link
+                payload.building_id,
+                payload.event_id,
+                "alerta",
+                payload.reports.alerta.share_link
             )
 
         if payload.reports.evento:
             crud.upsert_report(
                 db,
-                event_id=payload.event_id,
-                rtype="evento",
-                link=payload.reports.evento.share_link
+                payload.building_id,
+                payload.event_id,
+                "evento",
+                payload.reports.evento.share_link
             )
 
         if payload.reports.mensual:
             crud.upsert_report(
                 db,
-                event_id=payload.event_id,
-                rtype="mensual",
-                link=payload.reports.mensual.share_link
+                payload.building_id,
+                payload.event_id,
+                "mensual",
+                payload.reports.mensual.share_link
             )
 
         return {"ok": True}
 
     except Exception as e:
-        # Error REAL del backend
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -182,6 +185,13 @@ def get_event(event_id: str, db: Session = Depends(get_db)):
     return ev
 
 
-@app.get("/events/{event_id}/reports", response_model=List[schemas.ReportOut])
-def get_event_reports(event_id: str, db: Session = Depends(get_db)):
-    return crud.get_reports_for_event(db, event_id)
+@app.get(
+    "/buildings/{building_id}/events/{event_id}/reports",
+    response_model=List[schemas.ReportOut]
+)
+def get_event_reports(
+    building_id: str,
+    event_id: str,
+    db: Session = Depends(get_db)
+):
+    return crud.get_reports_for_event(db, building_id, event_id)

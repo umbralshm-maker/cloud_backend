@@ -32,8 +32,8 @@ def get_db():
 def verify_api_key(x_api_key: str = Header(None)):
     """
     Seguridad por API KEY.
-    - La key DEBE existir en Render como SHM_API_KEY
-    - El cliente DEBE enviarla como header X-API-Key
+    Render debe tener SHM_API_KEY
+    Cliente debe enviar header X-API-Key
     """
     expected = os.getenv("SHM_API_KEY")
 
@@ -44,10 +44,7 @@ def verify_api_key(x_api_key: str = Header(None)):
         )
 
     if x_api_key != expected:
-        raise HTTPException(
-            status_code=403,
-            detail="Forbidden"
-        )
+        raise HTTPException(status_code=403, detail="Forbidden")
 
 
 # =========================
@@ -74,18 +71,12 @@ def ingest_alert(
     db: Session = Depends(get_db),
 ):
     if not data.event_time:
-        raise HTTPException(
-            status_code=400,
-            detail="event_time is required"
-        )
+        raise HTTPException(status_code=400, detail="event_time is required")
 
     try:
         event_time = isoparse(data.event_time)
     except Exception:
-        raise HTTPException(
-            status_code=400,
-            detail="Invalid event_time format"
-        )
+        raise HTTPException(status_code=400, detail="Invalid event_time format")
 
     status = data.status or infer_status(data.lambda_max)
 
@@ -108,11 +99,10 @@ def ingest_alert(
     return {"ok": True}
 
 
-@app.post("/ingest/report_links")
+@app.post("/ingest/report_links", dependencies=[Depends(verify_api_key)])
 def ingest_report_links(
     payload: schemas.ReportLinksIn,
     db: Session = Depends(get_db),
-    _: None = Depends(verify_api_key)
 ):
     try:
         event = crud.get_event(
@@ -131,7 +121,6 @@ def ingest_report_links(
         if payload.reports.alerta:
             crud.upsert_report(
                 db,
-                payload.building_id,
                 payload.event_id,
                 "alerta",
                 payload.reports.alerta.share_link
@@ -140,7 +129,6 @@ def ingest_report_links(
         if payload.reports.evento:
             crud.upsert_report(
                 db,
-                payload.building_id,
                 payload.event_id,
                 "evento",
                 payload.reports.evento.share_link
@@ -149,7 +137,6 @@ def ingest_report_links(
         if payload.reports.mensual:
             crud.upsert_report(
                 db,
-                payload.building_id,
                 payload.event_id,
                 "mensual",
                 payload.reports.mensual.share_link
@@ -180,7 +167,11 @@ def get_building(building_id: str, db: Session = Depends(get_db)):
 
 @app.get("/events/{event_id}", response_model=schemas.EventOut)
 def get_event(event_id: str, db: Session = Depends(get_db)):
-    ev = crud.get_event(db, event_id)
+    ev = (
+        db.query(models.Event)
+        .filter_by(event_id=event_id)
+        .first()
+    )
     if not ev:
         raise HTTPException(status_code=404, detail="Event not found")
     return ev
@@ -195,4 +186,4 @@ def get_event_reports(
     event_id: str,
     db: Session = Depends(get_db)
 ):
-    return crud.get_reports_for_event(db, building_id, event_id)
+    return crud.get_reports_for_event(db, event_id)

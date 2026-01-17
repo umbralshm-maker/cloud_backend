@@ -1,10 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Fri Jan 16 23:47:51 2026
-
-@author: ST
-"""
-
 # app/crud.py
 from sqlalchemy.orm import Session
 from . import models
@@ -40,7 +33,6 @@ def upsert_event(
     )
 
     if ev:
-        # Evento ya existe → actualiza solo lo permitido
         ev.status = status
         ev.lambda_max = lambda_max
         ev.event_time = event_time
@@ -57,26 +49,29 @@ def upsert_event(
     db.commit()
 
 
-def upsert_report(
-    db: Session,
-    building_id: str,
-    event_id: str,
-    rtype: str,
-    link: str
-):
+def create_placeholder_event(db: Session, building_id: str, event_id: str):
+    ev = models.Event(
+        building_id=building_id,
+        event_id=event_id,
+        status="SIN_DATOS",
+        lambda_max=None,
+        event_time=None
+    )
+    db.add(ev)
+    db.commit()
+    db.refresh(ev)
+    return ev
+
+
+def upsert_report(db: Session, event_id: str, rtype: str, link: str):
     r = (
         db.query(models.Report)
-        .filter_by(
-            building_id=building_id,
-            event_id=event_id,
-            type=rtype
-        )
+        .filter_by(event_id=event_id, type=rtype)
         .first()
     )
 
     if not r:
         r = models.Report(
-            building_id=building_id,
             event_id=event_id,
             type=rtype,
             share_link=link
@@ -86,6 +81,7 @@ def upsert_report(
         r.share_link = link
 
     db.commit()
+
 
 def get_all_buildings(db: Session):
     return db.query(models.Building).all()
@@ -102,29 +98,14 @@ def get_building(db: Session, building_id: str):
 def get_event(db: Session, building_id: str, event_id: str):
     return (
         db.query(models.Event)
-        .filter_by(event_id=event_id, building_id=building_id)
+        .filter_by(building_id=building_id, event_id=event_id)
         .first()
     )
 
-def create_placeholder_event(db: Session, building_id: str, event_id: str):
-    ev = models.Event(
-        building_id=building_id,
-        event_id=event_id,
-        status="SIN_DATOS",
-        lambda_max=None,
-        event_time=None
-    )
-    db.add(ev)
-    db.commit()
-    db.refresh(ev)
-    return ev
 
-def get_reports_for_event(db: Session, building_id: str, event_id: str):
+def get_reports_for_event(db: Session, event_id: str):
     return (
         db.query(models.Report)
-        .filter_by(
-            building_id=building_id,
-            event_id=event_id
-        )
+        .filter_by(event_id=event_id)
         .all()
     )

@@ -51,3 +51,4 @@ class Report(Base):
     share_link = Column(String, nullable=False)
 
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+

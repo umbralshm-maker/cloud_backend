@@ -82,14 +82,25 @@ def get_building(db: Session, building_id: str):
     )
 
 
-def get_event(db: Session, event_id: str):
+def get_event(db: Session, building_id: str, event_id: str):
     return (
         db.query(models.Event)
-        .filter_by(event_id=event_id)
-        .order_by(models.Event.created_at.desc())
+        .filter_by(event_id=event_id, building_id=building_id)
         .first()
     )
 
+def create_placeholder_event(db: Session, building_id: str, event_id: str):
+    ev = models.Event(
+        building_id=building_id,
+        event_id=event_id,
+        status="SIN_DATOS",
+        lambda_max=None,
+        event_time=None
+    )
+    db.add(ev)
+    db.commit()
+    db.refresh(ev)
+    return ev
 
 def get_reports_for_event(db: Session, event_id: str):
     return (

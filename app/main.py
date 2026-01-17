@@ -1,20 +1,26 @@
 # app/main.py
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends, HTTPException, Header
 from sqlalchemy.orm import Session
 from datetime import datetime
 from typing import List
 from dateutil.parser import isoparse
+import os
 
 from .database import SessionLocal, engine
 from . import models, schemas, crud
-from .security import verify_api_key
 
 
+# =========================
+# DB init
+# =========================
 models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="SHM Cloud Backend")
 
 
+# =========================
+# Dependencies
+# =========================
 def get_db():
     db = SessionLocal()
     try:
@@ -23,6 +29,30 @@ def get_db():
         db.close()
 
 
+def verify_api_key(x_api_key: str = Header(None)):
+    """
+    Seguridad por API KEY.
+    - La key DEBE existir en Render como SHM_API_KEY
+    - El cliente DEBE enviarla como header X-API-Key
+    """
+    expected = os.getenv("SHM_API_KEY")
+
+    if not expected:
+        raise HTTPException(
+            status_code=500,
+            detail="Server misconfigured: SHM_API_KEY not set"
+        )
+
+    if x_api_key != expected:
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden"
+        )
+
+
+# =========================
+# Utils
+# =========================
 def infer_status(lam: float) -> str:
     if lam is None:
         return "SIN_DATOS"
@@ -35,19 +65,27 @@ def infer_status(lam: float) -> str:
     return "CRITICO"
 
 
-@app.post("/ingest/alert")
+# =========================
+# INGESTA
+# =========================
+@app.post("/ingest/alert", dependencies=[Depends(verify_api_key)])
 def ingest_alert(
     data: schemas.AlertIn,
     db: Session = Depends(get_db),
-    _: None = Depends(verify_api_key)
 ):
     if not data.event_time:
-        raise HTTPException(status_code=400, detail="event_time is required")
+        raise HTTPException(
+            status_code=400,
+            detail="event_time is required"
+        )
 
     try:
         event_time = isoparse(data.event_time)
     except Exception:
-        raise HTTPException(status_code=400, detail="Invalid event_time format")
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid event_time format"
+        )
 
     status = data.status or infer_status(data.lambda_max)
 
@@ -70,15 +108,15 @@ def ingest_alert(
     return {"ok": True}
 
 
-@app.post("/ingest/report_links")
+@app.post("/ingest/report_links", dependencies=[Depends(verify_api_key)])
 def ingest_report_links(
     payload: schemas.ReportLinksIn,
     db: Session = Depends(get_db),
-    _: None = Depends(verify_api_key)
 ):
     try:
         event = crud.get_event(db, payload.event_id)
 
+        # Si el evento no existe aún, se crea placeholder
         if not event:
             crud.upsert_event(
                 db,
@@ -116,11 +154,13 @@ def ingest_report_links(
         return {"ok": True}
 
     except Exception as e:
+        # Error REAL del backend
         raise HTTPException(status_code=500, detail=str(e))
 
 
-
-
+# =========================
+# QUERIES
+# =========================
 @app.get("/buildings", response_model=List[schemas.BuildingOut])
 def list_buildings(db: Session = Depends(get_db)):
     return crud.get_all_buildings(db)

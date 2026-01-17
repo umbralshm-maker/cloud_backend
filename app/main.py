@@ -184,4 +184,5 @@ def get_event_reports(
     event_id: str,
     db: Session = Depends(get_db)
 ):
-    return crud.get_reports_for_event(db, event_id)
+    return crud.get_reports_for_event(db, building_id, event_id)
+

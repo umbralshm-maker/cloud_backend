@@ -13,7 +13,15 @@ HEADER_NAME = "X-API-Key"
 
 
 def verify_api_key(request: Request):
-    expected_key = os.getenv(API_KEY_ENV)
+    expected_key = os.getenv("SHM_API_KEY")
+    received_key = request.headers.get("X-API-Key")
+
+    print("EXPECTED:", repr(expected_key))
+    print("RECEIVED:", repr(received_key))
+
+    if not expected_key or received_key != expected_key:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
 
     if not expected_key:
         raise HTTPException(

@@ -108,7 +108,7 @@ def ingest_report_links(
     print("PAYLOAD:", payload)
 
     try:
-        # 1️⃣ Asegurar edificio (OBLIGATORIO por FK)
+        # 🔴 PASO 1: ASEGURAR BUILDING (OBLIGATORIO)
         crud.upsert_building(
             db,
             building_id=payload.building_id,
@@ -116,57 +116,56 @@ def ingest_report_links(
             lambda_max=None
         )
 
-        # 2️⃣ Buscar evento
+        # 🔴 PASO 2: BUSCAR EVENTO
         event = crud.get_event(
             db,
             payload.building_id,
             payload.event_id
         )
 
-        # 3️⃣ Crear placeholder si no existe
+        print("EVENT FOUND:", event)
+
+        # 🔴 PASO 3: CREAR PLACEHOLDER SI NO EXISTE
         if not event:
+            print("CREATING PLACEHOLDER EVENT")
             event = crud.create_placeholder_event(
                 db,
                 payload.building_id,
                 payload.event_id
             )
 
+        # 🔴 PASO 4: UPSERT REPORTS
         if payload.reports.alerta:
-            print("UPSERT ALERTA")
             crud.upsert_report(
                 db,
-                payload.event_id,
-                "alerta",
-                payload.reports.alerta.share_link
+                event_id=payload.event_id,
+                rtype="alerta",
+                link=payload.reports.alerta.share_link
             )
 
         if payload.reports.evento:
-            print("UPSERT EVENTO")
             crud.upsert_report(
                 db,
-                payload.event_id,
-                "evento",
-                payload.reports.evento.share_link
+                event_id=payload.event_id,
+                rtype="evento",
+                link=payload.reports.evento.share_link
             )
 
         if payload.reports.mensual:
-            print("UPSERT MENSUAL")
             crud.upsert_report(
                 db,
-                payload.event_id,
-                "mensual",
-                payload.reports.mensual.share_link
+                event_id=payload.event_id,
+                rtype="mensual",
+                link=payload.reports.mensual.share_link
             )
 
-        print("=== INGEST REPORT LINKS OK ===")
+        print("INGEST REPORT LINKS OK")
         return {"ok": True}
 
     except Exception as e:
-        import traceback
         print("🔥🔥🔥 EXCEPTION 🔥🔥🔥")
-        traceback.print_exc()
+        print(repr(e))
         raise HTTPException(status_code=500, detail=str(e))
-
 
 # =========================
 # QUERIES

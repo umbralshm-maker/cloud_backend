@@ -26,15 +26,19 @@ class Event(Base):
 
     id = Column(Integer, primary_key=True)
     event_id = Column(String, nullable=False)
+    building_id = Column(
+        String,
+        ForeignKey("buildings.building_id"),
+        nullable=False
+    )
 
     status = Column(String, nullable=False)
     lambda_max = Column(Float, nullable=True)
-    event_time = Column(DateTime(timezone=True), nullable=False)
+    event_time = Column(DateTime(timezone=True), nullable=True)
 
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-
-    __table_args__ = (
-        UniqueConstraint("event_id", "building_id", name="uq_event_building"),
+    created_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now()
     )
 
 class Report(Base):
@@ -45,9 +49,3 @@ class Report(Base):
     type = Column(String, nullable=False)
     share_link = Column(String, nullable=False)
 
-    __table_args__ = (
-        UniqueConstraint(
-            "event_id", "type",
-            name="uq_report_event_type"
-        ),
-    )

@@ -25,15 +25,35 @@ def upsert_building(db: Session, building_id: str, status: str, lambda_max):
     db.commit()
 
 
-def create_event(db: Session, building_id: str, event_id: str, status: str, lambda_max, event_time=None):
-    ev = models.Event(
-        building_id=building_id,
-        event_id=event_id,
-        status=status,
-        lambda_max=lambda_max,
-        event_time=event_time
+def upsert_event(
+    db: Session,
+    building_id: str,
+    event_id: str,
+    status: str,
+    lambda_max,
+    event_time
+):
+    ev = (
+        db.query(models.Event)
+        .filter_by(event_id=event_id, building_id=building_id)
+        .first()
     )
-    db.add(ev)
+
+    if ev:
+        # Evento ya existe → actualiza solo lo permitido
+        ev.status = status
+        ev.lambda_max = lambda_max
+        ev.event_time = event_time
+    else:
+        ev = models.Event(
+            building_id=building_id,
+            event_id=event_id,
+            status=status,
+            lambda_max=lambda_max,
+            event_time=event_time
+        )
+        db.add(ev)
+
     db.commit()
 
 

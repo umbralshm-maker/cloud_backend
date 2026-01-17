@@ -5,34 +5,26 @@ Created on Sat Jan 17 13:21:10 2026
 @author: ST
 """
 # app/security.py
+# app/security.py
 import os
-from fastapi import Request, HTTPException
+from fastapi import Header, HTTPException
 
 API_KEY_ENV = "SHM_API_KEY"
-HEADER_NAME = "X-API-Key"
 
 
-def verify_api_key(request: Request):
-    expected_key = os.getenv("SHM_API_KEY")
-    received_key = request.headers.get("X-API-Key")
+def verify_api_key(x_api_key: str = Header(None)):
+    expected_key = os.getenv(API_KEY_ENV)
 
-    print("EXPECTED:", repr(expected_key))
-    print("RECEIVED:", repr(received_key))
-
-    if not expected_key or received_key != expected_key:
-        raise HTTPException(status_code=403, detail="Forbidden")
-
-
+    # Error de configuración del servidor
     if not expected_key:
         raise HTTPException(
             status_code=500,
-            detail="Server misconfigured: API key not set"
+            detail="Server misconfigured: SHM_API_KEY not set"
         )
 
-    received_key = request.headers.get(HEADER_NAME)
-
-    if not received_key or received_key != expected_key:
+    # Petición no autorizada
+    if not x_api_key or x_api_key != expected_key:
         raise HTTPException(
-            status_code=401,
-            detail="Unauthorized"
+            status_code=403,
+            detail="Forbidden"
         )

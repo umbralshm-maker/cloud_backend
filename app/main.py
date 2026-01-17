@@ -1,35 +1,19 @@
 # app/main.py
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy.orm import Session
 from datetime import datetime
-import os
+from typing import List
+from dateutil.parser import isoparse
+
 from .database import SessionLocal, engine
 from . import models, schemas, crud
-from typing import List
-from fastapi import HTTPException
-from fastapi import HTTPException
-from dateutil.parser import isoparse
-from fastapi import Header
-from fastapi import Request
 from .security import verify_api_key
+
 
 models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="SHM Cloud Backend")
 
-
-def verify_api_key(x_api_key: str = Header(None)):
-    expected = os.getenv("SHM_API_KEY")
-
-    # Si no hay key configurada, NO bloqueamos (modo dev)
-    if not expected:
-        return
-
-    if not x_api_key or x_api_key != expected:
-        raise HTTPException(
-            status_code=403,
-            detail="Invalid or missing API key"
-        )
 
 def get_db():
     db = SessionLocal()
@@ -54,11 +38,9 @@ def infer_status(lam: float) -> str:
 @app.post("/ingest/alert")
 def ingest_alert(
     data: schemas.AlertIn,
-    request: Request,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    _: None = Depends(verify_api_key)
 ):
-    verify_api_key(request)
-
     if not data.event_time:
         raise HTTPException(status_code=400, detail="event_time is required")
 
@@ -91,11 +73,9 @@ def ingest_alert(
 @app.post("/ingest/report_links")
 def ingest_report_links(
     payload: schemas.ReportLinksIn,
-    request: Request,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    _: None = Depends(verify_api_key)
 ):
-    verify_api_key(request)
-
     try:
         event = crud.get_event(db, payload.event_id)
 
@@ -137,6 +117,7 @@ def ingest_report_links(
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
 
 
 

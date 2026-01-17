@@ -40,7 +40,6 @@ class Event(Base):
     )
 
 
-
 class Report(Base):
     __tablename__ = "reports"
 
@@ -53,6 +52,6 @@ class Report(Base):
     __table_args__ = (
         UniqueConstraint(
             "building_id", "event_id", "type",
-            name="uq_report_per_event_type"
+            name="uq_report_event_type"
         ),
     )

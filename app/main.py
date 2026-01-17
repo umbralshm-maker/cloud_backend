@@ -158,6 +158,7 @@ def ingest_report_links(
         return {"ok": True}
 
     except Exception as e:
+        print("🔥 EXCEPTION:", repr(e))
         raise HTTPException(status_code=500, detail=str(e))
 
 

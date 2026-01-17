@@ -108,33 +108,8 @@ def ingest_report_links(
     print("PAYLOAD:", payload)
 
     try:
-        # 🔴 PASO 1: ASEGURAR BUILDING (OBLIGATORIO)
-        crud.upsert_building(
-            db,
-            building_id=payload.building_id,
-            status="SIN_DATOS",
-            lambda_max=None
-        )
+        # ✅ SOLO REPORTS — nada de buildings, nada de events
 
-        # 🔴 PASO 2: BUSCAR EVENTO
-        event = crud.get_event(
-            db,
-            payload.building_id,
-            payload.event_id
-        )
-
-        print("EVENT FOUND:", event)
-
-        # 🔴 PASO 3: CREAR PLACEHOLDER SI NO EXISTE
-        if not event:
-            print("CREATING PLACEHOLDER EVENT")
-            event = crud.create_placeholder_event(
-                db,
-                payload.building_id,
-                payload.event_id
-            )
-
-        # 🔴 PASO 4: UPSERT REPORTS
         if payload.reports.alerta:
             crud.upsert_report(
                 db,
@@ -169,6 +144,7 @@ def ingest_report_links(
         print("🔥🔥🔥 EXCEPTION 🔥🔥🔥")
         print(repr(e))
         raise HTTPException(status_code=500, detail=str(e))
+
 
 # =========================
 # QUERIES

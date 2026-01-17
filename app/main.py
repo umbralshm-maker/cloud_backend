@@ -104,14 +104,19 @@ def ingest_report_links(
     payload: schemas.ReportLinksIn,
     db: Session = Depends(get_db),
 ):
+    print("=== INGEST REPORT LINKS CALLED ===")
+    print("PAYLOAD:", payload)
+
     try:
         event = crud.get_event(
             db,
             payload.building_id,
             payload.event_id
         )
+        print("EVENT FOUND:", event)
 
         if not event:
+            print("CREATING PLACEHOLDER EVENT")
             event = crud.create_placeholder_event(
                 db,
                 payload.building_id,
@@ -119,6 +124,7 @@ def ingest_report_links(
             )
 
         if payload.reports.alerta:
+            print("UPSERT ALERTA")
             crud.upsert_report(
                 db,
                 payload.event_id,
@@ -127,6 +133,7 @@ def ingest_report_links(
             )
 
         if payload.reports.evento:
+            print("UPSERT EVENTO")
             crud.upsert_report(
                 db,
                 payload.event_id,
@@ -135,6 +142,7 @@ def ingest_report_links(
             )
 
         if payload.reports.mensual:
+            print("UPSERT MENSUAL")
             crud.upsert_report(
                 db,
                 payload.event_id,
@@ -142,10 +150,13 @@ def ingest_report_links(
                 payload.reports.mensual.share_link
             )
 
+        print("=== INGEST REPORT LINKS OK ===")
         return {"ok": True}
 
     except Exception as e:
-        print("🔥 EXCEPTION:", repr(e))
+        import traceback
+        print("🔥🔥🔥 EXCEPTION 🔥🔥🔥")
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
 

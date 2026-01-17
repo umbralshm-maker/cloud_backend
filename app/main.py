@@ -2,16 +2,32 @@
 from fastapi import FastAPI, Depends
 from sqlalchemy.orm import Session
 from datetime import datetime
-
+import os
 from .database import SessionLocal, engine
 from . import models, schemas, crud
 from typing import List
 from fastapi import HTTPException
+from fastapi import HTTPException
+from dateutil.parser import isoparse
+from fastapi import Header
 
 models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="SHM Cloud Backend")
 
+
+def verify_api_key(x_api_key: str = Header(None)):
+    expected = os.getenv("SHM_API_KEY")
+
+    # Si no hay key configurada, NO bloqueamos (modo dev)
+    if not expected:
+        return
+
+    if not x_api_key or x_api_key != expected:
+        raise HTTPException(
+            status_code=403,
+            detail="Invalid or missing API key"
+        )
 
 def get_db():
     db = SessionLocal()
@@ -33,8 +49,23 @@ def infer_status(lam: float) -> str:
     return "CRITICO"
 
 
-@app.post("/ingest/alert")
+@app.post("/ingest/alert", dependencies=[Depends(verify_api_key)])
 def ingest_alert(data: schemas.AlertIn, db: Session = Depends(get_db)):
+
+    if not data.event_time:
+        raise HTTPException(
+            status_code=400,
+            detail="event_time is required"
+        )
+
+    try:
+        event_time = isoparse(data.event_time)
+    except Exception:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid event_time format"
+        )
+
     status = data.status or infer_status(data.lambda_max)
 
     crud.upsert_building(
@@ -44,28 +75,63 @@ def ingest_alert(data: schemas.AlertIn, db: Session = Depends(get_db)):
         lambda_max=data.lambda_max
     )
 
-    crud.create_event(
+    crud.upsert_event(
         db,
         building_id=data.building_id,
         event_id=data.event_id,
         status=status,
         lambda_max=data.lambda_max,
-        event_time=datetime.fromisoformat(data.event_time) if data.event_time else None
+        event_time=event_time
     )
 
     return {"ok": True}
 
 
-@app.post("/ingest/report_links")
-def ingest_report_links(data: schemas.ReportLinksIn, db: Session = Depends(get_db)):
-    for rtype, payload in data.reports.items():
-        crud.upsert_report(
-            db,
-            event_id=data.event_id,
-            rtype=rtype,
-            link=payload["share_link"]
-        )
-    return {"ok": True}
+
+@app.post("/ingest/report_links", dependencies=[Depends(verify_api_key)])
+def ingest_report_links(
+    payload: schemas.ReportLinksIn,
+    db: Session = Depends(get_db)
+):
+    try:
+        event = crud.get_event(db, payload.building_id, payload.event_id)
+
+        if not event:
+            event = crud.create_placeholder_event(
+                db,
+                building_id=payload.building_id,
+                event_id=payload.event_id
+            )
+
+        # SOLO links, nunca estado
+        if payload.reports.alerta:
+            crud.upsert_report(
+                db,
+                event_id=payload.event_id,
+                rtype="alerta",
+                link=payload.reports.alerta.share_link
+            )
+
+        if payload.reports.evento:
+            crud.upsert_report(
+                db,
+                event_id=payload.event_id,
+                rtype="evento",
+                link=payload.reports.evento.share_link
+            )
+
+        if payload.reports.mensual:
+            crud.upsert_report(
+                db,
+                event_id=payload.event_id,
+                rtype="mensual",
+                link=payload.reports.mensual.share_link
+            )
+
+        return {"ok": True}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 

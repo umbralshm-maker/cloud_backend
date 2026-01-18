@@ -39,6 +39,25 @@ class Event(Base):
         UniqueConstraint("event_id", "building_id", name="uq_event_building"),
     )
 
+
+class Alert(Base):
+    __tablename__ = "alerts"
+
+    id = Column(Integer, primary_key=True)
+
+    building_id = Column(String, index=True, nullable=False)
+    event_id = Column(String, index=True, nullable=False)
+
+    status = Column(String, nullable=False)
+    lambda_max = Column(Float)
+
+    event_time = Column(DateTime(timezone=True))
+    created_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False
+    )
+
 class Report(Base):
     __tablename__ = "reports"
 

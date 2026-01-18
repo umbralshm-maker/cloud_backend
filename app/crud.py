@@ -133,6 +133,34 @@ def upsert_alert(
     db.commit()
     return ev
 
+def create_alert(
+    db: Session,
+    building_id: str,
+    event_id: str,
+    status: str,
+    lambda_max,
+    event_time
+):
+    alert = models.Alert(
+        building_id=building_id,
+        event_id=event_id,
+        status=status,
+        lambda_max=lambda_max,
+        event_time=event_time
+    )
+    db.add(alert)
+    db.commit()
+    db.refresh(alert)
+    return alert
+
+
+def get_alerts_for_building(db: Session, building_id: str):
+    return (
+        db.query(models.Alert)
+        .filter_by(building_id=building_id)
+        .order_by(models.Alert.created_at.desc())
+        .all()
+    )
 
 def get_all_buildings(db: Session):
     return db.query(models.Building).all()

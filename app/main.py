@@ -87,6 +87,7 @@ def ingest_alert(
 
     status = data.status or infer_status(data.lambda_max)
 
+    # 1. Actualiza estado actual del edificio
     crud.upsert_building(
         db,
         building_id=data.building_id,
@@ -94,16 +95,28 @@ def ingest_alert(
         lambda_max=data.lambda_max
     )
 
-    crud.upsert_alert(
-    db,
-    building_id=data.building_id,
-    event_id=data.event_id,
-    lambda_max=data.lambda_max,
-    status=status,
-    event_time=event_time
-)
+    # 2. Asegura evento
+    crud.upsert_event(
+        db,
+        building_id=data.building_id,
+        event_id=data.event_id,
+        status=status,
+        lambda_max=data.lambda_max,
+        event_time=event_time
+    )
+
+    # 3. CREA ALERTA (histórico)
+    crud.create_alert(
+        db,
+        building_id=data.building_id,
+        event_id=data.event_id,
+        status=status,
+        lambda_max=data.lambda_max,
+        event_time=event_time
+    )
 
     return {"ok": True}
+
 
 @app.get(
     "/buildings/{building_id}/events",
@@ -115,17 +128,15 @@ def get_building_events(
 ):
     return crud.get_events_for_building(db, building_id)
 
-@app.get("/buildings/{building_id}/alerts")
+@app.get(
+    "/buildings/{building_id}/alerts",
+    response_model=List[schemas.AlertOut]
+)
 def get_alerts_for_building(
     building_id: str,
     db: Session = Depends(get_db),
 ):
-    return (
-        db.query(models.Event)
-        .filter_by(building_id=building_id)
-        .order_by(models.Event.event_time.desc())
-        .all()
-    )
+    return crud.get_alerts_for_building(db, building_id)
 
 @app.post("/ingest/report_links", dependencies=[Depends(verify_api_key)])
 def ingest_report_links(
@@ -190,18 +201,28 @@ def get_building(building_id: str, db: Session = Depends(get_db)):
     return b
 
 
-@app.get("/buildings/{building_id}/events/{event_id}")
-
-def get_event(event_id: str, db: Session = Depends(get_db)):
+@app.get(
+    "/buildings/{building_id}/events/{event_id}",
+    response_model=schemas.EventOut
+)
+def get_event(
+    building_id: str,
+    event_id: str,
+    db: Session = Depends(get_db)
+):
     ev = (
         db.query(models.Event)
-        .filter_by(event_id=event_id)
+        .filter_by(
+            building_id=building_id,
+            event_id=event_id
+        )
         .first()
     )
+
     if not ev:
         raise HTTPException(status_code=404, detail="Event not found")
-    return ev
 
+    return ev
 
 @app.get(
     "/buildings/{building_id}/events/{event_id}/reports",

@@ -59,3 +59,12 @@ class ReportOut(BaseModel):
 
     class Config:
         orm_mode = True
+        
+class AlertOut(BaseModel):
+    status: str
+    lambda_max: Optional[float]
+    event_time: Optional[str]
+    created_at: str
+
+    class Config:
+        orm_mode = True

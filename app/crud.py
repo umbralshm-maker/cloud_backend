@@ -160,3 +160,11 @@ def get_reports_for_event(db: Session, building_id: str, event_id: str):
         .filter_by(building_id=building_id, event_id=event_id)
         .all()
     )
+
+def get_events_for_building(db: Session, building_id: str):
+    return (
+        db.query(models.Event)
+        .filter_by(building_id=building_id)
+        .order_by(models.Event.event_time.desc())
+        .all()
+    )

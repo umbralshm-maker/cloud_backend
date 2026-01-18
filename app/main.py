@@ -105,6 +105,15 @@ def ingest_alert(
 
     return {"ok": True}
 
+@app.get(
+    "/buildings/{building_id}/events",
+    response_model=List[schemas.EventOut]
+)
+def get_building_events(
+    building_id: str,
+    db: Session = Depends(get_db)
+):
+    return crud.get_events_for_building(db, building_id)
 
 @app.post("/ingest/report_links", dependencies=[Depends(verify_api_key)])
 def ingest_report_links(

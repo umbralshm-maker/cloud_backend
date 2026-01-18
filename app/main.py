@@ -5,6 +5,7 @@ from datetime import datetime
 from typing import List
 from dateutil.parser import isoparse
 import os
+from fastapi.middleware.cors import CORSMiddleware
 
 from .database import SessionLocal, engine
 from . import models, schemas, crud

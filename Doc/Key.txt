@@ -1,0 +1,8 @@
+Key:
+
+SHM_API_KEY
+
+
+Value:
+
+shm_local_desktop_2026_prod

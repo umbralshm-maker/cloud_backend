@@ -6,8 +6,18 @@ Created on Fri Jan 16 23:47:02 2026
 """
 
 # app/models.py
-from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, UniqueConstraint
+from sqlalchemy import (
+    Column,
+    Integer,
+    String,
+    Float,
+    DateTime,
+    ForeignKey,
+    UniqueConstraint,
+    Index
+)
 from sqlalchemy.sql import func
+from .database import Base
 from .database import Base
 
 
@@ -45,18 +55,35 @@ class Alert(Base):
 
     id = Column(Integer, primary_key=True)
 
-    building_id = Column(String, index=True, nullable=False)
-    event_id = Column(String, index=True, nullable=False)
+    building_id = Column(
+        String,
+        ForeignKey("buildings.building_id"),
+        index=True,
+        nullable=False
+    )
+
+    event_id = Column(
+        String,
+        ForeignKey("events.event_id"),
+        index=True,
+        nullable=False
+    )
 
     status = Column(String, nullable=False)
     lambda_max = Column(Float)
 
     event_time = Column(DateTime(timezone=True))
+
     created_at = Column(
         DateTime(timezone=True),
         server_default=func.now(),
         nullable=False
     )
+
+    __table_args__ = (
+        Index("idx_alert_building_created", "building_id", "created_at"),
+    )
+
 
 class Report(Base):
     __tablename__ = "reports"

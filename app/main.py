@@ -115,6 +115,18 @@ def get_building_events(
 ):
     return crud.get_events_for_building(db, building_id)
 
+@app.get("/buildings/{building_id}/alerts")
+def get_alerts_for_building(
+    building_id: str,
+    db: Session = Depends(get_db),
+):
+    return (
+        db.query(models.Event)
+        .filter_by(building_id=building_id)
+        .order_by(models.Event.event_time.desc())
+        .all()
+    )
+
 @app.post("/ingest/report_links", dependencies=[Depends(verify_api_key)])
 def ingest_report_links(
     payload: schemas.ReportLinksIn,
